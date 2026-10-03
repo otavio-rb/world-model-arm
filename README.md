@@ -1,5 +1,9 @@
 # world-model-arm
 
+> **Trabalho em andamento.** Este repositório faz parte de um TCC em
+> desenvolvimento. O código, os resultados e a documentação ainda estão
+> evoluindo e podem mudar — algumas tarefas (como a preensão) seguem em aberto.
+
 Comparação entre aprendizado por reforço **model-free** (SAC) e **baseado em
 modelo de mundo** (DreamerV3) no controle de braços robóticos simulados, com
 foco em **eficiência amostral** — quantas interações reais com o ambiente cada
