@@ -75,9 +75,10 @@ A curva de erro compara, a cada passo, a pose imaginada com a real. Os
 **primeiros 5 passos são o "seed"** (zona em azul): ali o sonho é inicializado com
 os frames reais, então o erro é ~0 **por construção** — isso não é mérito do
 modelo. A partir do passo 5 o modelo imagina em malha aberta, e aí sim o número é
-informativo: o erro cresce mas fica **limitado (~10 cm) e não diverge** ao longo de
-dezenas de passos, degradando além do horizonte de treino (~15 passos) — o que
-justifica por que o Dreamer imagina em horizontes curtos e re-ancora na realidade.
+informativo: o erro cresce mas fica **limitado (poucos centímetros, ~6 cm) e não
+diverge** ao longo de dezenas de passos, degradando além do horizonte de treino
+(~15 passos) — o que justifica por que o Dreamer imagina em horizontes curtos e
+re-ancora na realidade.
 
 ![Erro de previsão](figures/prediction_error.png)
 

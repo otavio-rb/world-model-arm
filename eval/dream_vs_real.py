@@ -16,6 +16,7 @@ REPO = pathlib.Path(__file__).resolve().parents[1]
 os.environ.setdefault("WMA_ENVS", str(REPO / "envs"))
 DV = os.environ.get("WMA_DREAMER", str(REPO / "dreamerv3-torch"))
 sys.path.insert(0, DV)
+sys.path.insert(0, os.environ["WMA_ENVS"])
 CKPT = pathlib.Path(os.environ.get(
     "WMA_DREAMER_CKPT", os.path.join(DV, "logdir", "ur5e_state", "ur5e_state_final.pt")))
 
@@ -57,19 +58,30 @@ def batch(o): return {k: np.array([v]) for k, v in o.items()}
 def decode(l):
     return wm.heads["decoder"](wm.dynamics.get_feat(l).unsqueeze(1))["state"].mode()[0, 0].cpu().numpy()
 
-# Phase 1: real rollout with the policy (record qpos, actions, ee)
-obs = env.reset(); target = u._target.copy()
+# fixed, camera-facing, reachable target (visible in the render)
+FRONT_TARGET = np.array([0.35, -0.15, 0.38])
+
+# Phase 1: real rollout with the policy (record qpos, smoothed actions, ee).
+# The applied action is EMA-smoothed so the rendered real arm moves smoothly
+# (the raw policy jitters at the target); imagination replays the same actions.
+env.reset()
+target = FRONT_TARGET.copy(); u._target = target; u.data.mocap_pos[0] = target
+mujoco.mj_forward(u.model, u.data)
+obs = env._obs(u._get_obs(), True, False)
 obss, acts, rqpos, ree = [obs], [], [], []
 prev_lat, prev_act = None, torch.zeros(1, 6, device=dev)
+a_smooth = None
 with torch.no_grad():
     for t in range(T):
         data = wm.preprocess(batch(obs)); embed = wm.encoder(data)
         lat, _ = wm.dynamics.obs_step(prev_lat, prev_act, embed, data["is_first"], sample=False)
-        a = actor(wm.dynamics.get_feat(lat)).mode()
+        a = actor(wm.dynamics.get_feat(lat)).mode()[0].cpu().numpy()
+        a_smooth = a if a_smooth is None else 0.5 * a_smooth + 0.5 * a
         rqpos.append(u.data.qpos[:6].copy()); ree.append(u._ee().copy())
-        a_np = a[0].cpu().numpy(); acts.append(a_np)
-        obs, _, _, _ = env.step(a_np); obss.append(obs)
-        prev_lat = {k: v.detach() for k, v in lat.items()}; prev_act = a.detach()
+        acts.append(a_smooth.copy())
+        obs, _, _, _ = env.step(a_smooth); obss.append(obs)
+        prev_lat = {k: v.detach() for k, v in lat.items()}
+        prev_act = torch.tensor([a_smooth], dtype=torch.float32, device=dev)
 
 # Phase 2: seed on first K real frames, then imagine OPEN-LOOP
 prev_lat, prev_act = None, torch.zeros(1, 6, device=dev)
