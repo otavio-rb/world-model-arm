@@ -1,0 +1,17 @@
+# dependências externas clonadas pelo setup_models.py
+menagerie/
+dreamerv3-torch/
+
+# saídas de treino
+logdir/
+*.pt
+
+# python
+__pycache__/
+*.pyc
+.venv*/
+.ipynb_checkpoints/
+
+# sistema
+.DS_Store
+Thumbs.db

@@ -1,0 +1,6 @@
+<mujoco model="panda_grasp">
+  <include file="mjx_single_cube.xml"/>
+  <worldbody>
+    <camera name="cam" pos="1.35 -0.95 0.95" xyaxes="0.57 0.82 0 -0.42 0.29 0.86"/>
+  </worldbody>
+</mujoco>

@@ -1,0 +1,15 @@
+<mujoco model="ur5e_reach">
+  <include file="scene.xml"/>
+
+  <option timestep="0.002"/>
+
+  <worldbody>
+    <!-- reach target (moved each episode) -->
+    <body name="target" mocap="true" pos="0.4 0.3 0.5">
+      <geom name="gtarget" type="sphere" size="0.03" rgba="0.95 0.35 0.30 1"
+            contype="0" conaffinity="0"/>
+    </body>
+    <!-- fixed camera for pixel observations / previews -->
+    <camera name="cam" pos="1.4 -1.1 1.1" xyaxes="0.7 0.72 0 -0.34 0.33 0.88"/>
+  </worldbody>
+</mujoco>

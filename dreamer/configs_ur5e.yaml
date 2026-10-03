@@ -1,0 +1,13 @@
+ur5e_proprio:
+  task: ur5e_state
+  steps: 2e5
+  action_repeat: 1
+  envs: 4
+  time_limit: 200
+  prefill: 2500
+  train_ratio: 512
+  video_pred_log: false
+  compile: false
+  eval_episode_num: 0
+  encoder: {mlp_keys: 'state', cnn_keys: '$^'}
+  decoder: {mlp_keys: 'state', cnn_keys: '$^'}

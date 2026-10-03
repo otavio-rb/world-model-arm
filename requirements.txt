@@ -1,0 +1,24 @@
+# --- núcleo (simulação e RL model-free) ---
+mujoco>=3.1
+gymnasium>=0.29
+stable-baselines3>=2.2
+numpy
+matplotlib
+pillow
+
+# --- viewers interativos (opcional) ---
+fastapi
+uvicorn
+websockets
+
+# --- DreamerV3 (world model) ---
+# O dreamerv3-torch (clonado pelo setup_models.py) espera estas versões:
+gym==0.22.0
+ruamel.yaml==0.17.40
+tensorboard
+einops
+
+# --- PyTorch: instale separadamente, conforme sua plataforma ---
+# CUDA/CPU:  pip install torch
+# AMD ROCm:  siga https://pytorch.org (índice ROCm). Este trabalho usou
+#            torch rocm no Windows (Radeon RX 9060 XT); torch.cuda mapeia para HIP.
