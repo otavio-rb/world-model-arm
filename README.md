@@ -129,15 +129,6 @@ re-ancora na realidade.
 > para a zona de seed seria o **erro de reconstrução** (decodificar o latente
 > posterior e comparar), ainda não plotado.
 
-Políticas aprendidas executando a tarefa de alcance:
-
-<p align="center">
-  <img src="figures/sac_ur5e_reach.gif" width="330"/>
-  <img src="figures/dreamer_ur5e_reach.gif" width="330"/>
-</p>
-
-*(esquerda: SAC; direita: política treinada pelo world model)*
-
 ---
 
 ## Tarefa difícil: preensão (grasping)
