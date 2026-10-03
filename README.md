@@ -27,6 +27,46 @@ Baseline: SAC do [Stable-Baselines3](https://github.com/DLR-RM/stable-baselines3
 
 ---
 
+## O que é um modelo de mundo
+
+Um **modelo de mundo** (world model) é uma rede neural que aprende a **dinâmica do
+ambiente**: dado o estado atual e uma ação, ele prevê o **próximo estado**, a
+**recompensa** e se o episódio **continua**. Em outras palavras, o agente aprende a
+**simular o ambiente internamente** — a "imaginar" o que vai acontecer antes de agir.
+
+Isso o separa do aprendizado por reforço **model-free** (como o SAC), que aprende
+apenas uma política reativa (estado → ação) e uma estimativa de valor, **sem nenhum
+modelo das consequências**: o model-free só melhora **agindo** no ambiente real,
+enquanto o model-based constrói um modelo e pode **raciocinar sobre o futuro**.
+
+### O que um modelo de mundo permite
+
+- **Treinar na imaginação.** A política é otimizada dentro de rollouts **imaginados**
+  pelo modelo (RL baseado em modelo, como o DreamerV3), sem tocar no ambiente real.
+  Cada interação real vira muitos "ensaios mentais" — a origem da **eficiência
+  amostral**.
+- **Prever o futuro ("sonhar").** Dado um estado e uma sequência de ações, o modelo
+  prevê os estados/observações seguintes. Dá para **visualizar** essa previsão e
+  compará-la com o que de fato acontece (ver "Ver o modelo de mundo funcionando").
+- **Planejar e avaliar hipóteses.** Como o modelo prevê consequências, é possível
+  projetar diferentes ações à frente e compará-las — um raciocínio **contrafactual**
+  ("e se eu fizesse X?") que uma política reativa não consegue.
+- **Representação latente compacta e memória.** O estado é comprimido num espaço
+  latente (no DreamerV3, um RSSM recorrente), o que facilita o aprendizado e dá
+  **memória** para lidar com observação parcial.
+
+### Por que isso importa (especialmente para robôs)
+
+A vantagem prática decisiva é a **eficiência amostral**. Em um robô **físico**, cada
+tentativa custa tempo, desgaste e risco — não dá para fazer milhões de interações
+reais como em simulação. Um modelo de mundo aprende a dinâmica com **pouca
+interação real** e treina a política **na imaginação**, o que torna o aprendizado
+direto em hardware viável (ver, por exemplo, o trabalho *DayDreamer*, que treinou
+robôs físicos com DreamerV3 em poucas horas). É justamente essa propriedade que este
+repositório mede e visualiza em **braços robóticos**.
+
+---
+
 ## Resultado principal: eficiência amostral
 
 Na tarefa de alcance com o UR5e, o world model atinge um dado nível de
