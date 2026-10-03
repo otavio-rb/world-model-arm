@@ -29,23 +29,35 @@ Baseline: SAC do [Stable-Baselines3](https://github.com/DLR-RM/stable-baselines3
 
 ## Resultado principal: eficiência amostral
 
-Na tarefa de alcance com o UR5e, os dois métodos atingem o mesmo desempenho
-final, mas o world model chega lá com **cerca de 2,7× menos interação real** com
-o ambiente.
+Na tarefa de alcance com o UR5e, o world model atinge um dado nível de
+desempenho com **cerca de 2,7× menos interação real** com o ambiente que o
+baseline model-free. O fator é estável ao limiar escolhido (2,68–2,69× para
+retornos-alvo entre 60 e 100).
 
 ![Eficiência amostral](figures/sample_efficiency_ur5e.png)
 
-| Método | Para atingir retorno 100 | Desempenho final (platô) |
+| Método | Passos reais para atingir retorno 100 | Observação |
 |---|---|---|
-| SAC (model-free) | ~152 mil passos | ~120–185 |
-| DreamerV3 (world model) | ~57 mil passos | ~120–185 |
+| SAC (model-free) | ~152 mil | treinado até ~250 mil passos |
+| DreamerV3 (world model) | ~57 mil | treino interrompido em ~62 mil passos |
 
-**Por quê.** O SAC só aprende com as transições que realmente experimentou. O
-Dreamer treina a política dentro de rollouts **imaginados** pelo modelo de mundo
-(sem tocar no simulador), com um sinal de supervisão denso (reconstruir a
+> **Ressalva importante.** Esta é **uma única execução (1 seed) por método**, e as
+> duas curvas foram treinadas com orçamentos diferentes: o SAC até ~250 mil passos,
+> o Dreamer até ~62 mil. Nos últimos 100 episódios de cada curva, o retorno médio é
+> SAC ≈ 100 (±75) e Dreamer ≈ 77 (±84) — e a curva do Dreamer **ainda estava
+> subindo** quando foi interrompida. Portanto **a paridade de desempenho final não
+> está demonstrada**; o resultado sólido aqui é a **eficiência amostral** (a curva
+> azul alcança qualquer nível antes da laranja), não o teto final. Ver "Limitações".
+
+**Por quê (hipótese).** O SAC só aprende com as transições que realmente
+experimentou. O Dreamer treina a política dentro de rollouts **imaginados** pelo
+modelo de mundo (sem tocar no simulador), com supervisão densa (reconstruir a
 observação, prever recompensa e continuidade) e gradientes analíticos através da
-dinâmica aprendida. Cada passo real rende ordens de magnitude mais sinal de
-aprendizado.
+dinâmica aprendida. Uma ressalva honesta: o ganho medido **não isola** o efeito do
+modelo de mundo da **razão update-para-dado (UTD)** — este Dreamer faz muito mais
+atualizações por passo real do que este SAC. Parte do 2,7× pode vir do UTD, não só
+da imaginação; um SAC com UTD equiparado seria necessário para separar os dois
+(ver "Limitações").
 
 ---
 
@@ -59,13 +71,22 @@ o que o modelo imagina.
 
 ![Sonho vs realidade](figures/dream_vs_reality.gif)
 
-A curva de erro mostra o comportamento esperado de um bom modelo de mundo:
-previsão exata enquanto ancorado nos dados reais (zona em azul), erro **limitado
-e não divergente** (~10 cm) em malha aberta longa, e degradação além do horizonte
-de treino (~15 passos) — o que justifica por que o Dreamer imagina em horizontes
-curtos e re-ancora na realidade.
+A curva de erro compara, a cada passo, a pose imaginada com a real. Os
+**primeiros 5 passos são o "seed"** (zona em azul): ali o sonho é inicializado com
+os frames reais, então o erro é ~0 **por construção** — isso não é mérito do
+modelo. A partir do passo 5 o modelo imagina em malha aberta, e aí sim o número é
+informativo: o erro cresce mas fica **limitado (~10 cm) e não diverge** ao longo de
+dezenas de passos, degradando além do horizonte de treino (~15 passos) — o que
+justifica por que o Dreamer imagina em horizontes curtos e re-ancora na realidade.
 
 ![Erro de previsão](figures/prediction_error.png)
+
+> Ressalvas desta figura (ver "Limitações"): é **uma única trajetória** de uma
+> política de alcance já convergida (que vai ao alvo e para), então prever um ponto
+> quase fixo é relativamente fácil; faltam baselines triviais (congelar a última
+> pose; velocidade constante) e um teste com ações aleatórias. E o número honesto
+> para a zona de seed seria o **erro de reconstrução** (decodificar o latente
+> posterior e comparar), ainda não plotado.
 
 Políticas aprendidas executando a tarefa de alcance:
 
@@ -80,10 +101,11 @@ Políticas aprendidas executando a tarefa de alcance:
 
 ## Tarefa difícil: preensão (grasping)
 
-A tarefa de **pegar um objeto** com o Franka Panda expõe o limite do RL puro. É
-um problema de exploração difícil e recompensa quase esparsa: para receber a
-recompensa de levantar, é preciso alinhar, fechar a garra e erguer numa sequência
-precisa que a exploração aleatória quase nunca descobre.
+A tarefa de **pegar um objeto** com o Franka Panda é um problema de exploração
+difícil e recompensa quase esparsa: para receber a recompensa de levantar, é
+preciso alinhar, fechar a garra e erguer numa sequência precisa que a exploração
+aleatória quase nunca descobre. Nas condições testadas aqui, o RL **model-free**
+não resolveu a tarefa:
 
 - **SAC do zero:** 600 mil passos, **0 sucessos**. A política estaciona em "se
   aproximar do objeto" e nunca descobre a preensão.
@@ -95,8 +117,14 @@ pega e levanta o cubo de forma confiável:
 
 ![Preensão por IK](figures/scripted_grasp_strip.png)
 
-Conclusão (alinhada à literatura): preensão do zero requer mais do que ajuste de
-recompensa — **demonstrações** (aprendizado por imitação para semear a política),
+Importante: até aqui só o **model-free (SAC)** foi testado na preensão, com **uma
+seed e sem varredura de hiperparâmetros** — então isto **não** é uma afirmação
+geral sobre "RL". Treinar o **Dreamer na preensão** (que notoriamente também sofre
+com recompensa esparsa em manipulação) é o experimento que falta, e está planejado;
+mesmo um Dreamer que falhe ali seria um resultado mais forte que o atual.
+
+Conclusão parcial, alinhada à literatura: preensão do zero costuma exigir mais do
+que ajuste de recompensa — **demonstrações** (imitação para semear a política),
 HER, ou currículos mais fortes. O controlador por IK deste repositório serve
 justamente como **demonstrador** para esse próximo passo.
 
@@ -177,6 +205,33 @@ PyTorch ROCm no Windows. A API `torch.cuda` mapeia para o HIP/ROCm, então o
 código usa `device="cuda"` sem alterações. Não há dependência de nuvem.
 
 ---
+
+## Limitações e ameaças à validade
+
+Trabalho em andamento; os pontos abaixo são conhecidos e priorizados.
+
+- **n = 1.** Uma única seed por método na curva de eficiência e uma única
+  trajetória na figura de erro de previsão. Em RL, a variância entre seeds costuma
+  ser da ordem da diferença medida; o 2,7× deve ser reportado como **mediana de
+  3–5 seeds com faixa (IQR)**, não como ponto.
+- **UTD não controlado.** O Dreamer recebe muito mais atualizações por passo real
+  do que este SAC (`train_ratio` alto vs `gradient_steps=1`). Logo o 2,7× **mistura**
+  "ganho do modelo de mundo" com "ganho de razão update-para-dado". Um SAC com UTD
+  equiparado (estilo REDQ/DroQ) é necessário para atribuir o ganho corretamente.
+- **Orçamentos de treino diferentes.** SAC ~250 mil passos, Dreamer ~62 mil — a
+  paridade de teto **não** está demonstrada. Falta rodar o Dreamer ao mesmo orçamento.
+- **Zona de seed = 0 por construção** na figura de erro de previsão; o número
+  informativo (erro de reconstrução) ainda não é plotado.
+- **Erro de previsão sem baseline.** A trajetória usa uma política convergida que
+  vai ao alvo e para — prever um ponto quase fixo é fácil. Faltam baselines triviais
+  (congelar a última pose; velocidade constante) e um teste com ações aleatórias.
+- **Reprodutibilidade.** Os envs usam `np.random` global em vez de `self.np_random`,
+  então `reset(seed=...)` não fixa alvo/pose — as figuras não são reproduzíveis bit a
+  bit. Correção planejada.
+- **Suavização.** A curva é suavizada por janela de episódios; como Dreamer e SAC
+  têm contagens de episódios diferentes, o ideal seria suavizar por **bins de passos
+  reais**. O fator fica estável (~2,7×) para janelas de 10–20 episódios.
+- **Preensão:** só model-free testado; sem Dreamer e sem varredura de hiperparâmetros.
 
 ## Referências
 
